@@ -1,3 +1,8 @@
+## 2.0.1
+
+- Fixed `setState() or markNeedsBuild() called during build` exception when pushing/popping routes using `InternetCheckerObserver`.
+- Added widget test coverage for route change behavior.
+
 ## 2.0.0
 
 - **Breaking Change**: Completely removed the third-party dependency `internet_connection_checker_plus`.

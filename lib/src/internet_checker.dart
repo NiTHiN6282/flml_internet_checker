@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import 'connection_checker.dart';
 import 'internet_checker_observer.dart';
 
@@ -109,7 +111,8 @@ class InternetChecker extends StatefulWidget {
   State<InternetChecker> createState() => _InternetCheckerState();
 }
 
-class _InternetCheckerState extends State<InternetChecker> with WidgetsBindingObserver {
+class _InternetCheckerState extends State<InternetChecker>
+    with WidgetsBindingObserver {
   late final FLMLInternetChecker _checker;
   late StreamSubscription<bool> _subscription;
   bool _isConnected = true;
@@ -157,9 +160,13 @@ class _InternetCheckerState extends State<InternetChecker> with WidgetsBindingOb
 
   void _onRouteChanged() {
     if (mounted) {
-      setState(() {
-        _currentRoute = InternetCheckerObserver.instance.currentRoute.value;
-        _currentRouteName = _currentRoute?.settings.name;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _currentRoute = InternetCheckerObserver.instance.currentRoute.value;
+            _currentRouteName = _currentRoute?.settings.name;
+          });
+        }
       });
     }
   }
@@ -179,7 +186,8 @@ class _InternetCheckerState extends State<InternetChecker> with WidgetsBindingOb
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    InternetCheckerObserver.instance.currentRoute.removeListener(_onRouteChanged);
+    InternetCheckerObserver.instance.currentRoute
+        .removeListener(_onRouteChanged);
     _subscription.cancel();
     super.dispose();
   }
@@ -294,8 +302,13 @@ class _InternetCheckerState extends State<InternetChecker> with WidgetsBindingOb
               curve: Curves.fastOutSlowIn,
               left: 0,
               right: 0,
-              top: widget.bannerLocation == InternetCheckerBannerLocation.top ? 0 : null,
-              bottom: widget.bannerLocation == InternetCheckerBannerLocation.bottom ? 0 : null,
+              top: widget.bannerLocation == InternetCheckerBannerLocation.top
+                  ? 0
+                  : null,
+              bottom:
+                  widget.bannerLocation == InternetCheckerBannerLocation.bottom
+                      ? 0
+                      : null,
               child: SafeArea(
                 child: Center(child: bannerWidget),
               ),
@@ -372,7 +385,8 @@ class _InternetCheckerState extends State<InternetChecker> with WidgetsBindingOb
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               )
                             : Text(
