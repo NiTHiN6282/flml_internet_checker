@@ -68,14 +68,24 @@ class FLMLInternetChecker {
     Duration? checkIntervalOnline,
     Duration? checkIntervalOffline,
   }) {
-    if (lookupHosts != null) this.lookupHosts = lookupHosts;
-    if (ipAddresses != null) this.ipAddresses = ipAddresses;
-    if (port != null) this.port = port;
-    if (timeout != null) this.timeout = timeout;
-    if (checkIntervalOnline != null)
+    if (lookupHosts != null) {
+      this.lookupHosts = lookupHosts;
+    }
+    if (ipAddresses != null) {
+      this.ipAddresses = ipAddresses;
+    }
+    if (port != null) {
+      this.port = port;
+    }
+    if (timeout != null) {
+      this.timeout = timeout;
+    }
+    if (checkIntervalOnline != null) {
       this.checkIntervalOnline = checkIntervalOnline;
-    if (checkIntervalOffline != null)
+    }
+    if (checkIntervalOffline != null) {
       this.checkIntervalOffline = checkIntervalOffline;
+    }
 
     // Reschedule next check with new intervals if currently polling
     if (_isPolling) {

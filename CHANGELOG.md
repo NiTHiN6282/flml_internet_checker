@@ -1,3 +1,8 @@
+## 3.0.1
+
+- Fixed static analysis linter warnings regarding missing braces in configure statements.
+- Fixed deprecated and web-only library warning reports in web platform checkers.
+
 ## 3.0.0
 
 - **Parallel Concurrency**: Probes DNS and TCP connections concurrently, reducing offline verification times up to 7x (from 20s+ to under 3s).
