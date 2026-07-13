@@ -1,3 +1,12 @@
+## 3.0.0
+
+- **Parallel Concurrency**: Probes DNS and TCP connections concurrently, reducing offline verification times up to 7x (from 20s+ to under 3s).
+- **Zero-Dependency Web Support**: Restored full Web platform compatibility using conditional compilation and HTML window/HTTP checks without adding any external dependencies.
+- **Connection Restored Success Banner**: Added a brief, custom green "Back Online" banner that automatically notifies the user when connection is recovered.
+- **Dismissible Banners**: Enabled swipe-to-dismiss and close-button control on non-blocking offline banners so users can bypass them and view cached data.
+- **Custom Animations**: Added controls to customize banner transition curves, entrance/exit animation durations, and show durations.
+- **Extended Test Suite**: Added widget testing coverage for new dismissible, swipe, and properties default behaviors.
+
 ## 2.0.1
 
 - Fixed `setState() or markNeedsBuild() called during build` exception when pushing/popping routes using `InternetCheckerObserver`.

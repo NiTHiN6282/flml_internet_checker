@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+
+import 'platform/platform_checker.dart';
 
 /// States for the internet connection status.
 enum InternetConnectionStatus {
@@ -29,8 +30,8 @@ class FLMLInternetChecker {
 
   /// Standard IP addresses (DNS servers) to verify via TCP socket connection on port 53.
   List<String> ipAddresses = [
-    '8.8.8.8',       // Google DNS
-    '1.1.1.1',       // Cloudflare DNS
+    '8.8.8.8', // Google DNS
+    '1.1.1.1', // Cloudflare DNS
     '208.67.222.222' // OpenDNS
   ];
 
@@ -49,8 +50,9 @@ class FLMLInternetChecker {
   bool _isConnected = true;
   bool get isConnected => _isConnected;
 
-  final StreamController<bool> _statusController = StreamController<bool>.broadcast();
-  
+  final StreamController<bool> _statusController =
+      StreamController<bool>.broadcast();
+
   /// A stream that emits connection status changes (true: connected, false: disconnected).
   Stream<bool> get onStatusChange => _statusController.stream;
 
@@ -70,9 +72,11 @@ class FLMLInternetChecker {
     if (ipAddresses != null) this.ipAddresses = ipAddresses;
     if (port != null) this.port = port;
     if (timeout != null) this.timeout = timeout;
-    if (checkIntervalOnline != null) this.checkIntervalOnline = checkIntervalOnline;
-    if (checkIntervalOffline != null) this.checkIntervalOffline = checkIntervalOffline;
-    
+    if (checkIntervalOnline != null)
+      this.checkIntervalOnline = checkIntervalOnline;
+    if (checkIntervalOffline != null)
+      this.checkIntervalOffline = checkIntervalOffline;
+
     // Reschedule next check with new intervals if currently polling
     if (_isPolling) {
       _scheduleNextCheck();
@@ -82,29 +86,14 @@ class FLMLInternetChecker {
   /// Verifies connectivity by checking lookup hosts and IP addresses.
   /// Updates the connection state and notifies listeners.
   Future<bool> checkConnection() async {
-    // 1. Try DNS lookups for configured hosts
-    for (final host in lookupHosts) {
-      try {
-        final result = await InternetAddress.lookup(host).timeout(timeout);
-        if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-          _updateStatus(true);
-          return true;
-        }
-      } catch (_) {}
-    }
-
-    // 2. Try socket connection to configured IPs on port 53 (fallback)
-    for (final ip in ipAddresses) {
-      try {
-        final socket = await Socket.connect(ip, port, timeout: timeout);
-        socket.destroy();
-        _updateStatus(true);
-        return true;
-      } catch (_) {}
-    }
-
-    _updateStatus(false);
-    return false;
+    final connected = await platformCheckConnection(
+      lookupHosts: lookupHosts,
+      ipAddresses: ipAddresses,
+      port: port,
+      timeout: timeout,
+    );
+    _updateStatus(connected);
+    return connected;
   }
 
   void _updateStatus(bool connected) {
@@ -118,7 +107,7 @@ class FLMLInternetChecker {
   void startPolling() {
     if (_isPolling) return;
     _isPolling = true;
-    
+
     // Run immediate check
     checkConnection().then((_) {
       _scheduleNextCheck();

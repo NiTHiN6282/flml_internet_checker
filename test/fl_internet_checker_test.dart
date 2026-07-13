@@ -109,5 +109,128 @@ void main() {
         ipAddresses: originalIps,
       );
     });
+
+    testWidgets('InternetChecker properties initialized with defaults',
+        (WidgetTester tester) async {
+      const checker = InternetChecker(
+        child: SizedBox(),
+      );
+      expect(checker.showOnlineRestoredBanner, isTrue);
+      expect(
+          checker.onlineRestoredText, equals('Internet Connection Restored'));
+      expect(
+          checker.onlineRestoredDuration, equals(const Duration(seconds: 3)));
+      expect(checker.dismissibleBanner, isFalse);
+      expect(checker.bannerAnimationDuration,
+          equals(const Duration(milliseconds: 300)));
+      expect(checker.bannerAnimationCurve, equals(Curves.fastOutSlowIn));
+    });
+
+    testWidgets(
+        'InternetChecker shows offline banner and handles close button dismissal',
+        (WidgetTester tester) async {
+      final checker = FLMLInternetChecker.instance;
+      final originalHosts = checker.lookupHosts;
+      final originalIps = checker.ipAddresses;
+
+      // Force offline state
+      checker.configure(
+        lookupHosts: [],
+        ipAddresses: [],
+      );
+
+      bool dismissed = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: InternetChecker(
+            useBanner: true,
+            dismissibleBanner: true,
+            onBannerDismissed: () {
+              dismissed = true;
+            },
+            child: const Scaffold(
+              body: Text('Main Content'),
+            ),
+          ),
+        ),
+      );
+
+      // Trigger the connection check
+      await checker.checkNow();
+      await tester.pumpAndSettle();
+
+      // Verify offline banner is displayed
+      expect(find.text('No Internet Connection'), findsOneWidget);
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+
+      // Tap the close button
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+
+      // Verify banner is dismissed and callback is triggered
+      expect(find.text('No Internet Connection'), findsNothing);
+      expect(dismissed, isTrue);
+
+      // Clean up
+      checker.stopPolling();
+      checker.configure(
+        lookupHosts: originalHosts,
+        ipAddresses: originalIps,
+      );
+    });
+
+    testWidgets('InternetChecker offline banner supports swipe-to-dismiss',
+        (WidgetTester tester) async {
+      final checker = FLMLInternetChecker.instance;
+      final originalHosts = checker.lookupHosts;
+      final originalIps = checker.ipAddresses;
+
+      // Force offline state
+      checker.configure(
+        lookupHosts: [],
+        ipAddresses: [],
+      );
+
+      bool dismissed = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: InternetChecker(
+            useBanner: true,
+            dismissibleBanner: true,
+            onBannerDismissed: () {
+              dismissed = true;
+            },
+            child: const Scaffold(
+              body: Text('Main Content'),
+            ),
+          ),
+        ),
+      );
+
+      // Trigger the connection check
+      await checker.checkNow();
+      await tester.pumpAndSettle();
+
+      // Verify offline banner is displayed
+      expect(find.text('No Internet Connection'), findsOneWidget);
+
+      // Swipe the banner to the right to dismiss
+      await tester.drag(
+          find.text('No Internet Connection'), const Offset(500.0, 0.0));
+      await tester.pumpAndSettle();
+
+      // Verify banner is dismissed and callback is triggered
+      expect(find.text('No Internet Connection'), findsNothing);
+      expect(dismissed, isTrue);
+
+      // Clean up
+      checker.stopPolling();
+      checker.configure(
+        lookupHosts: originalHosts,
+        ipAddresses: originalIps,
+      );
+    });
   });
 }

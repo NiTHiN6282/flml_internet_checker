@@ -181,6 +181,15 @@ await FLMLInternetChecker.instance.checkNow();
 | `retryButtonText` | `String` | `"Retry"` | Text shown on the retry button. |
 | `retryButtonStyle` | `ButtonStyle?` | `null` | Style for the retry button. |
 | `onOfflineModeChanged` | `ValueChanged<bool>?` | `null` | Fired when the device goes offline (`true`) or online (`false`). |
+| `showOnlineRestoredBanner` | `bool` | `true` | Show a brief green banner when internet connection is restored. |
+| `onlineRestoredText` | `String` | `"Internet Connection Restored"` | Text displayed inside the restored banner. |
+| `onlineRestoredTextStyle` | `TextStyle?` | `null` | TextStyle for the connection restored banner. |
+| `onlineRestoredBackgroundColor`| `Color?` | `Color(0xFF2E7D32)` | Background color for the restored banner. |
+| `onlineRestoredDuration` | `Duration` | `Duration(seconds: 3)` | Duration to show the restored banner before auto-dismissing. |
+| `dismissibleBanner` | `bool` | `false` | If `true`, the offline banner can be dismissed by swiping or clicking close. |
+| `onBannerDismissed` | `VoidCallback?` | `null` | Callback triggered when the offline banner is manually dismissed. |
+| `bannerAnimationDuration` | `Duration` | `Duration(milliseconds: 300)` | Duration for banner entrance and exit animations. |
+| `bannerAnimationCurve` | `Curve` | `Curves.fastOutSlowIn` | Curve for the banner slide animation. |
 
 ---
 
