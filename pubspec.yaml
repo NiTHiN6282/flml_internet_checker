@@ -1,11 +1,20 @@
 name: flml_internet_checker
-description: A zero-dependency, highly customizable internet connectivity checker for Flutter. Supports global root wrapping, route exclusions, and non-blocking banners.
-version: 3.0.1
-repository: https://github.com/NiTHiN6282/flml_internet_checker.git
+description: A zero-dependency, highly customizable internet connectivity checker for Flutter. Detects real internet access (not just Wi-Fi), with blocking screens, banners, route exclusions and WASM support.
+version: 4.0.0
+homepage: https://github.com/NiTHiN6282/flml_internet_checker
+repository: https://github.com/NiTHiN6282/flml_internet_checker
+issue_tracker: https://github.com/NiTHiN6282/flml_internet_checker/issues
+
+topics:
+  - connectivity
+  - internet
+  - network
+  - offline
+  - connection
 
 environment:
-  sdk: '>=2.15.0 <4.0.0'
-  flutter: ">=1.17.0"
+  sdk: ^3.5.0
+  flutter: ">=3.24.0"
 
 dependencies:
   flutter:
@@ -14,9 +23,4 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
-
-flutter:
-
-  # assets:
-  #   - packages/flml_internet_checker/assets/
+  flutter_lints: ^5.0.0

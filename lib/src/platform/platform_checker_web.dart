@@ -1,52 +1,119 @@
-// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
-
 import 'dart:async';
-import 'dart:html' as html;
+import 'dart:js_interop';
 
-/// Verifies connectivity on Web platforms using browser APIs and lightweight HTTP pings.
+/// Verifies connectivity on the Web using browser APIs.
+///
+/// Raw DNS/TCP sockets are not available in the browser, so this:
+/// 1. Returns `false` immediately when `navigator.onLine` is `false`.
+/// 2. Races `no-cors` HEAD requests to every host in [lookupHosts] (over
+///    HTTPS) and to the page's own origin. The first request that reaches a
+///    server wins. `no-cors` requests resolve for any HTTP status and only
+///    fail on network errors, so CORS headers are not required.
+///
+/// [ipAddresses] and [port] are ignored on the Web. Built with
+/// `dart:js_interop`, so it works with both dart2js and dart2wasm.
 Future<bool> platformCheckConnection({
   required List<String> lookupHosts,
   required List<String> ipAddresses,
   required int port,
   required Duration timeout,
 }) async {
-  // 1. Check navigator.onLine first
-  if (html.window.navigator.onLine == false) {
-    return false;
-  }
+  if (!_navigator.onLine) return false;
 
-  // 2. Perform a lightweight HTTP check to verify actual internet access.
-  // Since we cannot run raw DNS/TCP checks in the browser due to CORS/sandboxing,
-  // we ping the same-origin hosting origin or CORS-friendly public APIs.
-  try {
-    final origin = html.window.location.origin;
-    final uri = Uri.parse(origin).replace(
-      queryParameters: {
-        '_cb': DateTime.now().millisecondsSinceEpoch.toString()
-      },
-    );
+  final cacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
+  final urls = <String>[
+    for (final host in lookupHosts) 'https://$host/?_flml=$cacheBuster',
+    if (_originProbeUrl(cacheBuster) case final origin?) origin,
+  ];
+  if (urls.isEmpty) return false;
 
-    final request = await html.HttpRequest.request(
-      uri.toString(),
-      method: 'HEAD',
-    ).timeout(timeout);
+  final completer = Completer<bool>();
+  final controller = _AbortController();
+  var pending = urls.length;
 
-    if (request.status != null && request.status! > 0) {
-      return true;
+  void onFailure(Object _) {
+    pending--;
+    if (pending == 0 && !completer.isCompleted) {
+      completer.complete(false);
     }
-  } catch (_) {
-    // If same-origin ping fails, try a fallback to a public CORS-friendly API like GitHub
-    try {
-      final request = await html.HttpRequest.request(
-        'https://api.github.com',
-        method: 'HEAD',
-      ).timeout(timeout);
-
-      if (request.status != null && request.status! > 0) {
-        return true;
-      }
-    } catch (_) {}
   }
 
-  return false;
+  final deadline = Timer(timeout, () {
+    if (!completer.isCompleted) completer.complete(false);
+  });
+
+  final init = _RequestInit(
+    method: 'HEAD'.toJS,
+    mode: 'no-cors'.toJS,
+    cache: 'no-store'.toJS,
+    signal: controller.signal,
+  );
+  for (final url in urls) {
+    _fetch(url.toJS, init).toDart.then((_) {
+      if (!completer.isCompleted) completer.complete(true);
+    }, onError: onFailure);
+  }
+
+  final result = await completer.future;
+  deadline.cancel();
+  controller.abort();
+  return result;
+}
+
+/// Triggers [onChanged] when the browser fires `online` / `offline` events,
+/// so changes are picked up immediately instead of on the next poll.
+void platformListenForChanges(void Function() onChanged) {
+  final listener = ((JSAny? _) => onChanged()).toJS;
+  _window.addEventListener('online'.toJS, listener);
+  _window.addEventListener('offline'.toJS, listener);
+}
+
+/// The page's own origin, unless it is served locally (a local dev server is
+/// always reachable and would mask a missing internet connection).
+String? _originProbeUrl(String cacheBuster) {
+  final origin = Uri.tryParse(_window.location.origin);
+  if (origin == null || !origin.isScheme('http') && !origin.isScheme('https')) {
+    return null;
+  }
+  const loopbackHosts = {'localhost', '127.0.0.1', '[::1]', '::1'};
+  if (loopbackHosts.contains(origin.host)) return null;
+  return origin.replace(path: '/', query: '_flml=$cacheBuster').toString();
+}
+
+@JS('window')
+external _Window get _window;
+
+@JS('navigator')
+external _Navigator get _navigator;
+
+@JS('fetch')
+external JSPromise<JSAny?> _fetch(JSString resource, _RequestInit options);
+
+extension type _Window._(JSObject _) implements JSObject {
+  external _Location get location;
+  external void addEventListener(JSString type, JSFunction listener);
+}
+
+extension type _Location._(JSObject _) implements JSObject {
+  external String get origin;
+}
+
+extension type _Navigator._(JSObject _) implements JSObject {
+  external bool get onLine;
+}
+
+extension type _RequestInit._(JSObject _) implements JSObject {
+  external factory _RequestInit({
+    JSString method,
+    JSString mode,
+    JSString cache,
+    JSObject signal,
+  });
+}
+
+@JS('AbortController')
+extension type _AbortController._(JSObject _) implements JSObject {
+  external factory _AbortController();
+  external JSObject get signal;
+  external void abort();
 }

@@ -1,3 +1,34 @@
+## 4.0.0
+
+### Bug fixes
+- **Navigation state is preserved while offline**: the child (e.g. the whole `Navigator` in `MaterialApp.builder`) is no longer removed from the tree when the offline screen or banner appears. Previously, every connection drop reset the app to its initial route and discarded scroll positions and form input.
+- **Dialogs no longer break route exclusions**: `InternetCheckerObserver` ignores popup routes (dialogs, bottom sheets, menus), so opening a dialog on an excluded route no longer triggers the offline screen. Added `didRemove` handling and fixed `didReplace` for routes below the top.
+- **Banner animations now work**: `bannerAnimationDuration` and `bannerAnimationCurve` previously had no effect. Banners now slide and fade in and out.
+- **Web on WASM**: the web implementation used `dart:html`, so WASM builds fell back to a stub that threw `UnimplementedError`. It now uses `dart:js_interop` and works with both dart2js and dart2wasm.
+- **No more DNS-cache false positives**: hosts are now verified with a real TCP handshake on port 443 instead of `InternetAddress.lookup`, which could succeed from the OS DNS cache while offline.
+- **Listening without the widget works**: `FLMLInternetChecker.instance.onStatusChange.listen(...)` now starts polling automatically. Previously, nothing was emitted unless an `InternetChecker` widget was mounted.
+- Fixed a race where the "Connection Restored" banner could be skipped after tapping Retry.
+- `onOfflineModeChanged` now fires only on actual changes.
+- Errors thrown during a check no longer escape as unhandled exceptions; they count as offline.
+- Overlapping checks (polling, retry, app resume) now share one in-flight probe, so results can't be applied out of order.
+
+### Improvements
+- **Faster offline detection**: all probes (hosts + IPs) now race in parallel with a single deadline. A fully offline check takes at most `timeout` (3s), down from up to 2x `timeout`.
+- **IPv6 support**: added Google and Cloudflare IPv6 DNS servers to the default probes for IPv6-only networks.
+- **Instant web updates**: browser `online`/`offline` events trigger an immediate check.
+- **New `InternetConnectionBuilder` widget**: rebuilds any part of your UI when connectivity changes.
+- **New `customCheck` option**: replace the built-in probes with your own check (e.g. a health check against your backend).
+- **Dark mode**: the default offline screen adapts to dark themes.
+- New `internetConnectionDescription` parameter to customize or hide the subtitle on the offline screen.
+- New `FLMLInternetChecker.status`, `isPolling`, `defaultLookupHosts` and `defaultIpAddresses`.
+- The offline screen blocks focus, semantics and tickers of the content behind it, and the Android back button now navigates the app underneath instead of exiting.
+- Added pub.dev topics, a homepage and an issue tracker.
+
+### Breaking changes
+- Requires Dart 3.5 / Flutter 3.24 or newer.
+- `InternetChecker.backgroundColor` is now nullable (`Color?`) and defaults to a theme-aware color.
+- `lookupHosts` are now probed with TCP connections on port 443 instead of DNS lookups.
+
 ## 3.0.1
 
 - Fixed static analysis linter warnings regarding missing braces in configure statements.

@@ -13,20 +13,21 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'FLML Internet Checker Example',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        useMaterial3: true,
+      theme: ThemeData(colorSchemeSeed: Colors.indigo),
+      darkTheme: ThemeData(
+        colorSchemeSeed: Colors.indigo,
+        brightness: Brightness.dark,
       ),
       // 1. Register the InternetCheckerObserver to track current routes.
       // This works with standard routes, GoRouter, AutoRoute, etc.
       navigatorObservers: [InternetCheckerObserver()],
-      
+
       // 2. Wrap the entire app using the builder to make it a global checker.
       builder: (context, child) {
         return InternetChecker(
           // Define routes that should NOT block the user when offline (blacklist)
           excludeRoutes: const ['/local_page', '/banner_page'],
-          
+
           // Custom placeholder details for blocking mode
           internetConnectionText: "No Internet Connection",
           textStyle: const TextStyle(
@@ -34,11 +35,11 @@ class MyApp extends StatelessWidget {
             fontWeight: FontWeight.bold,
             color: Colors.indigo,
           ),
-          
+
           // Enable the built-in Retry button
           showRetryButton: true,
           retryButtonText: "Try Again",
-          
+
           child: child!,
         );
       },
@@ -72,21 +73,23 @@ class HomeScreen extends StatelessWidget {
             // Status Card showing real-time connectivity status
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
-                child: StreamBuilder<bool>(
-                  stream: FLMLInternetChecker.instance.onStatusChange,
-                  initialData: FLMLInternetChecker.instance.isConnected,
-                  builder: (context, snapshot) {
-                    final isOnline = snapshot.data ?? true;
+                // InternetConnectionBuilder rebuilds whenever connectivity changes.
+                child: InternetConnectionBuilder(
+                  builder: (context, isOnline) {
                     return Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: isOnline ? Colors.green[100] : Colors.red[100],
+                          backgroundColor:
+                              isOnline ? Colors.green[100] : Colors.red[100],
                           radius: 28,
                           child: Icon(
-                            isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                            isOnline
+                                ? Icons.wifi_rounded
+                                : Icons.wifi_off_rounded,
                             color: isOnline ? Colors.green : Colors.red,
                             size: 28,
                           ),
@@ -97,7 +100,8 @@ class HomeScreen extends StatelessWidget {
                           children: [
                             const Text(
                               "Connection Status",
-                              style: TextStyle(color: Colors.grey, fontSize: 13),
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 13),
                             ),
                             Text(
                               isOnline ? "Online" : "Offline",

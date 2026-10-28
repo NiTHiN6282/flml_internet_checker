@@ -1,65 +1,66 @@
 import 'dart:async';
 import 'dart:io';
 
-/// Verifies connectivity by checking lookup hosts and IP addresses concurrently.
+/// Verifies connectivity by racing TCP connections to every configured target.
+///
+/// Hostnames in [lookupHosts] are connected to on port 443 (this resolves DNS
+/// *and* completes a TCP handshake, so a stale OS DNS cache cannot produce a
+/// false positive). IPs in [ipAddresses] are connected to on [port].
+///
+/// All probes run in parallel and the first successful handshake wins, so the
+/// worst case (fully offline) takes at most [timeout].
 Future<bool> platformCheckConnection({
   required List<String> lookupHosts,
   required List<String> ipAddresses,
   required int port,
   required Duration timeout,
 }) async {
-  // 1. Try DNS lookups for configured hosts in parallel
-  if (lookupHosts.isNotEmpty) {
-    final completer = Completer<bool>();
-    int remaining = lookupHosts.length;
+  final targets = <(String, int)>[
+    for (final host in lookupHosts) (host, 443),
+    for (final ip in ipAddresses) (ip, port),
+  ];
+  if (targets.isEmpty) return false;
 
-    for (final host in lookupHosts) {
-      InternetAddress.lookup(host).timeout(timeout).then((result) {
-        if (completer.isCompleted) return;
-        if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-          completer.complete(true);
-        } else {
-          remaining--;
-          if (remaining == 0) {
-            completer.complete(false);
-          }
-        }
-      }).catchError((_) {
-        if (completer.isCompleted) return;
-        remaining--;
-        if (remaining == 0) {
-          completer.complete(false);
-        }
-      });
+  final completer = Completer<bool>();
+  final tasks = <ConnectionTask<Socket>>[];
+  var pending = targets.length;
+
+  void onFailure(Object _) {
+    pending--;
+    if (pending == 0 && !completer.isCompleted) {
+      completer.complete(false);
     }
-
-    final dnsSuccess = await completer.future;
-    if (dnsSuccess) return true;
   }
 
-  // 2. Try socket connection to configured IPs on port 53 in parallel (fallback)
-  if (ipAddresses.isNotEmpty) {
-    final completer = Completer<bool>();
-    int remaining = ipAddresses.length;
+  // A single deadline for the whole race. It also covers the DNS resolution
+  // performed by `Socket.startConnect` before the connection task exists.
+  final deadline = Timer(timeout, () {
+    if (!completer.isCompleted) completer.complete(false);
+  });
 
-    for (final ip in ipAddresses) {
-      Socket.connect(ip, port, timeout: timeout).then((socket) {
+  for (final (host, targetPort) in targets) {
+    Socket.startConnect(host, targetPort).then((task) {
+      if (completer.isCompleted) {
+        task.cancel();
+      } else {
+        tasks.add(task);
+      }
+      task.socket.then((socket) {
         socket.destroy();
-        if (!completer.isCompleted) {
-          completer.complete(true);
-        }
-      }).catchError((_) {
-        if (!completer.isCompleted) {
-          remaining--;
-          if (remaining == 0) {
-            completer.complete(false);
-          }
-        }
-      });
-    }
-
-    return await completer.future;
+        if (!completer.isCompleted) completer.complete(true);
+      }, onError: onFailure);
+    }, onError: onFailure);
   }
 
-  return false;
+  final result = await completer.future;
+  deadline.cancel();
+  // Abort the probes that are still connecting; their sockets are not needed.
+  for (final task in tasks) {
+    task.cancel();
+  }
+  return result;
 }
+
+/// Native platforms have no zero-dependency connectivity change events, so
+/// changes are detected by polling only.
+void platformListenForChanges(void Function() onChanged) {}
